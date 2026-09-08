@@ -30,263 +30,623 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Control de Luces ESP32</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
-  <style>
-    :root {
-      --bg: #0b0f19;
-      --card-bg: rgba(30, 41, 59, 0.7);
-      --accent: #38bdf8;
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --switch-on: #22c55e;
-      --switch-off: #334155;
-      --status-online: #22c55e;
-      --status-offline: #ef4444;
-      --danger: #f87171;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
-    body {
-      background: radial-gradient(circle at top, #1e293b, var(--bg));
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 24px 16px;
-    }
-    #pin-screen {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(11, 15, 25, 0.95);
-      backdrop-filter: blur(16px);
-      z-index: 999;
-      display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px;
-    }
-    .pin-container {
-      background: var(--card-bg);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 24px; padding: 30px 24px; width: 100%; max-width: 320px; text-align: center;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-    }
-    .pin-title { font-size: 1.2rem; margin-bottom: 8px; color: var(--accent); }
-    .pin-subtitle { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 20px; }
-    .pin-dots { display: flex; justify-content: center; gap: 16px; margin-bottom: 24px; }
-    .dot-input { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--accent); transition: all 0.2s; }
-    .dot-input.filled { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
-    .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-    .key-btn {
-      background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
-      color: var(--text); font-size: 1.3rem; font-weight: 600; padding: 16px; border-radius: 16px;
-      cursor: pointer; transition: all 0.1s ease;
-    }
-    .key-btn:active { transform: scale(0.92); background: rgba(56, 189, 248, 0.2); }
-    .key-btn.clear { color: var(--danger); }
-    .key-btn.enter { color: var(--switch-on); }
-    .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
-    @keyframes shake {
-      10%, 90% { transform: translate3d(-1px, 0, 0); }
-      20%, 80% { transform: translate3d(2px, 0, 0); }
-      30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-      40%, 60% { transform: translate3d(4px, 0, 0); }
-    }
-    .dashboard { width: 100%; max-width: 650px; display: none; }
-    .header { text-align: center; margin-bottom: 16px; position: relative; }
-    .header h1 { font-size: 1.6rem; color: var(--accent); }
-    .connection-status {
-      display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem;
-      color: var(--text-muted); margin-top: 6px; background: rgba(0,0,0,0.2); padding: 6px 14px; border-radius: 20px;
-    }
-    .status-dot { width: 10px; height: 10px; border-radius: 50%; background-color: var(--status-offline); transition: background-color 0.3s; }
-    .status-dot.connected { background-color: var(--status-online); }
-    .btn-lock {
-      position: absolute; right: 0; top: 0; background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.1); color: var(--text); padding: 8px 12px; border-radius: 10px; cursor: pointer; font-size: 0.8rem;
-    }
-    .master-actions { display: flex; gap: 12px; margin: 20px 0; }
-    .btn-master {
-      flex: 1; padding: 14px; font-weight: 700; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
-      cursor: pointer; transition: transform 0.1s ease;
-    }
-    .btn-master:active { transform: scale(0.96); }
-    .btn-all-on { background: rgba(34, 197, 94, 0.2); color: #4ade80; border-color: rgba(34, 197, 94, 0.4); }
-    .btn-all-off { background: rgba(239, 68, 68, 0.2); color: #f87171; border-color: rgba(239, 68, 68, 0.4); }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
-    .card {
-      background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 16px; padding: 18px 20px; display: flex; justify-content: space-between; align-items: center;
-    }
-    .channel-name { font-weight: 600; font-size: 1rem; }
-    .channel-status { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
-    .switch { position: relative; display: inline-block; width: 54px; height: 28px; }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--switch-off); transition: .3s; border-radius: 34px; }
-    .slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
-    input:checked + .slider { background-color: var(--switch-on); }
-    input:checked + .slider:before { transform: translateX(26px); }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smart Automation Hub | Industrial Relay Controller</title>
+    <!-- Cliente MQTT vía CDN -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        :root {
+            --bg-base: #090d16;
+            --surface-card: rgba(22, 30, 46, 0.75);
+            --surface-hover: rgba(30, 41, 59, 0.9);
+            --primary: #38bdf8;
+            --primary-glow: rgba(56, 189, 248, 0.35);
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.4);
+            --danger: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #64748b;
+            --border-card: rgba(255, 255, 255, 0.08);
+            --radius-lg: 18px;
+            --radius-md: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: radial-gradient(circle at 50% 0%, #1e293b 0%, var(--bg-base) 70%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 580px;
+            background: var(--surface-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-card);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* --- HEADER & BARRA DE ESTADO --- */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-card);
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, var(--primary), #0284c7);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        .brand-icon svg {
+            width: 22px;
+            height: 22px;
+            fill: #ffffff;
+        }
+
+        .brand-text h1 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .brand-text p {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-card);
+            border-radius: 30px;
+            font-size: 0.78rem;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--danger);
+            transition: all 0.3s ease;
+        }
+
+        .status-dot.connected {
+            background-color: var(--success);
+            box-shadow: 0 0 10px var(--success);
+        }
+
+        /* --- PANTALLA DE ACCESO (PIN) --- */
+        .pin-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            text-align: center;
+        }
+
+        .pin-screen h2 {
+            font-size: 1.25rem;
+            margin-bottom: 6px;
+        }
+
+        .pin-screen p {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        .pin-display {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+
+        .pin-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid var(--text-muted);
+            transition: all 0.2s ease;
+        }
+
+        .pin-dot.filled {
+            background: var(--primary);
+            border-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            width: 100%;
+            max-width: 280px;
+        }
+
+        .key-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-card);
+            color: var(--text-main);
+            font-size: 1.25rem;
+            font-weight: 600;
+            padding: 16px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .key-btn:active {
+            background: rgba(56, 189, 248, 0.15);
+            transform: scale(0.95);
+        }
+
+        .key-btn.action {
+            font-size: 0.9rem;
+            color: var(--primary);
+        }
+
+        /* --- DASHBOARD PRINCIPAL --- */
+        .stats-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border-card);
+            border-radius: var(--radius-md);
+            padding: 12px 16px;
+            margin-bottom: 20px;
+        }
+
+        .stats-info {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .stats-info span {
+            color: var(--text-main);
+            font-weight: 700;
+        }
+
+        .master-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-action {
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-all-on {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-all-on:hover { background: var(--success); color: #fff; }
+
+        .btn-all-off {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-all-off:hover { background: var(--danger); color: #fff; }
+
+        .relay-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+        }
+
+        .relay-card {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--border-card);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 110px;
+            transition: all 0.25s ease;
+            position: relative;
+        }
+
+        .relay-card.active {
+            background: rgba(16, 185, 129, 0.05);
+            border-color: rgba(16, 185, 129, 0.4);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.08);
+        }
+
+        .relay-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .relay-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.25s ease;
+        }
+
+        .relay-icon svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--text-muted);
+        }
+
+        .relay-card.active .relay-icon {
+            background: var(--success);
+            box-shadow: 0 0 12px var(--success-glow);
+        }
+
+        .relay-card.active .relay-icon svg {
+            fill: #ffffff;
+        }
+
+        .relay-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .relay-status-text {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .relay-card.active .relay-status-text {
+            color: var(--success);
+        }
+
+        /* Switch Toggle */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #334155;
+            transition: .3s;
+            border-radius: 30px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider { background-color: var(--success); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        .btn-lock {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: 0.2s;
+        }
+
+        .btn-lock:hover { color: var(--text-main); background: rgba(255, 255, 255, 0.05); }
+
+        .hidden { display: none !important; }
+
+        @media (max-width: 400px) {
+            .relay-grid { grid-template-columns: 1fr; }
+            .relay-card { height: 90px; }
+        }
+    </style>
 </head>
 <body>
 
-  <div id="pin-screen">
-    <div class="pin-container" id="pin-card">
-      <div class="pin-title">🔒 Acceso Remoto</div>
-      <div class="pin-subtitle" id="pin-msg">Ingresa el PIN de seguridad</div>
-      <div class="pin-dots">
-        <div class="dot-input"></div><div class="dot-input"></div><div class="dot-input"></div><div class="dot-input"></div>
-      </div>
-      <div class="keypad">
-        <button class="key-btn" onclick="pressKey('1')">1</button>
-        <button class="key-btn" onclick="pressKey('2')">2</button>
-        <button class="key-btn" onclick="pressKey('3')">3</button>
-        <button class="key-btn" onclick="pressKey('4')">4</button>
-        <button class="key-btn" onclick="pressKey('5')">5</button>
-        <button class="key-btn" onclick="pressKey('6')">6</button>
-        <button class="key-btn" onclick="pressKey('7')">7</button>
-        <button class="key-btn" onclick="pressKey('8')">8</button>
-        <button class="key-btn" onclick="pressKey('9')">9</button>
-        <button class="key-btn clear" onclick="clearPin()">C</button>
-        <button class="key-btn" onclick="pressKey('0')">0</button>
-        <button class="key-btn enter" onclick="checkPin()">✓</button>
-      </div>
+    <div class="app-container">
+        <!-- HEADER GENERAL -->
+        <div class="header">
+            <div class="brand">
+                <div class="brand-icon">
+                    <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                </div>
+                <div class="brand-text">
+                    <h1>Control Hub</h1>
+                    <p>ESP32 Automation</p>
+                </div>
+            </div>
+            <div class="status-badge">
+                <span id="statusDot" class="status-dot"></span>
+                <span id="statusText">Desconectado</span>
+            </div>
+        </div>
+
+        <!-- MODAL SECURITY PIN -->
+        <div id="pinScreen" class="pin-screen">
+            <h2>Acceso Restringido</h2>
+            <p>Ingresa el código PIN para desbloquear el panel</p>
+
+            <div class="pin-display">
+                <div class="pin-dot"></div>
+                <div class="pin-dot"></div>
+                <div class="pin-dot"></div>
+                <div class="pin-dot"></div>
+            </div>
+
+            <div class="keypad">
+                <button class="key-btn" onclick="pressPin('1')">1</button>
+                <button class="key-btn" onclick="pressPin('2')">2</button>
+                <button class="key-btn" onclick="pressPin('3')">3</button>
+                <button class="key-btn" onclick="pressPin('4')">4</button>
+                <button class="key-btn" onclick="pressPin('5')">5</button>
+                <button class="key-btn" onclick="pressPin('6')">6</button>
+                <button class="key-btn" onclick="pressPin('7')">7</button>
+                <button class="key-btn" onclick="pressPin('8')">8</button>
+                <button class="key-btn" onclick="pressPin('9')">9</button>
+                <button class="key-btn action" onclick="clearPin()">BORRAR</button>
+                <button class="key-btn" onclick="pressPin('0')">0</button>
+                <button class="key-btn action" onclick="checkPin()">OK</button>
+            </div>
+        </div>
+
+        <!-- DASHBOARD DE CONTROL -->
+        <div id="dashboardSection" class="hidden">
+            <div class="stats-bar">
+                <div class="stats-info">
+                    Canales Activos: <span id="activeCount">0</span> / 8
+                </div>
+                <div class="master-controls">
+                    <button class="btn-action btn-all-on" onclick="sendMasterCommand(1)">ENCENDER TODO</button>
+                    <button class="btn-action btn-all-off" onclick="sendMasterCommand(0)">APAGAR TODO</button>
+                    <button class="btn-lock" onclick="lockSystem()" title="Bloquear Panel">
+                        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="relay-grid" id="relayGrid">
+                <!-- Se inyectan dinámicamente con JS -->
+            </div>
+        </div>
     </div>
-  </div>
 
-  <div class="dashboard" id="main-dashboard">
-    <div class="header">
-      <button class="btn-lock" onclick="lockApp()">🔒 Bloquear</button>
-      <h1>Control de Luces ESP32</h1>
-      <div class="connection-status">
-        <span class="status-dot" id="status-dot"></span>
-        <span id="status-text">Conectando...</span>
-      </div>
-    </div>
-    <div class="master-actions">
-      <button class="btn-master btn-all-on" onclick="setAll(true)">⚡ ENCENDER TODO</button>
-      <button class="btn-master btn-all-off" onclick="setAll(false)">🌙 APAGAR TODO</button>
-    </div>
-    <div class="grid" id="relay-grid"></div>
-  </div>
+    <script>
+        // --- CONFIGURACIÓN TÉCNICA DE RED ---
+        const MQTT_BROKER = "wss://broker.hivemq.com:8884/mqtt";
+        const TOPIC_CONTROL = "casa/leonardo/reles/control";
+        const TOPIC_ESTADO = "casa/leonardo/reles/estado";
+        const MASTER_PIN = "1234";
 
-  <script>
-    const PIN_CORRECTO = "1234";
-    let currentPin = "";
-    const MQTT_BROKER = "broker.hivemq.com";
-    const MQTT_PORT = 8884; 
-    const TOPIC_CONTROL = "casa/leonardo/reles/control";
-    const TOPIC_ESTADO = "casa/leonardo/reles/estado";
-    let client = null;
+        let client = null;
+        let pinInput = "";
+        let relayStates = [0, 0, 0, 0, 0, 0, 0, 0];
 
-    function pressKey(num) {
-      if (currentPin.length < 4) {
-        currentPin += num;
-        updateDots();
-        if (currentPin.length === 4) setTimeout(checkPin, 150);
-      }
-    }
-    function clearPin() {
-      currentPin = "";
-      updateDots();
-      document.getElementById('pin-msg').innerText = "Ingresa el PIN de seguridad";
-      document.getElementById('pin-msg').style.color = "var(--text-muted)";
-    }
-    function updateDots() {
-      const dots = document.querySelectorAll('.dot-input');
-      dots.forEach((dot, index) => {
-        if (index < currentPin.length) dot.classList.add('filled');
-        else dot.classList.remove('filled');
-      });
-    }
-    function checkPin() {
-      if (currentPin === PIN_CORRECTO) {
-        document.getElementById('pin-screen').style.display = 'none';
-        document.getElementById('main-dashboard').style.display = 'block';
-        if (!client) iniciarMQTT();
-      } else {
-        const card = document.getElementById('pin-card');
-        card.classList.add('shake');
-        document.getElementById('pin-msg').innerText = "¡PIN Incorrecto!";
-        document.getElementById('pin-msg').style.color = "var(--danger)";
-        setTimeout(() => { card.classList.remove('shake'); clearPin(); }, 500);
-      }
-    }
-    function lockApp() {
-      clearPin();
-      document.getElementById('main-dashboard').style.display = 'none';
-      document.getElementById('pin-screen').style.display = 'flex';
-    }
-
-    const grid = document.getElementById('relay-grid');
-    for (let i = 1; i <= 8; i++) {
-      grid.innerHTML += `
-        <div class="card">
-          <div>
-            <div class="channel-name">Luz ${i}</div>
-            <div class="channel-status" id="st-${i}">Desconectado</div>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="sw-${i}" onchange="toggleRelay(${i})">
-            <span class="slider"></span>
-          </label>
-        </div>`;
-    }
-
-    function iniciarMQTT() {
-      const clientId = "WebClient_" + Math.random().toString(16).substr(2, 8);
-      client = new Paho.MQTT.Client(MQTT_BROKER, MQTT_PORT, "/mqtt", clientId);
-
-      client.onConnectionLost = () => {
-        document.getElementById('status-dot').classList.remove('connected');
-        document.getElementById('status-text').innerText = "Reconectando...";
-        setTimeout(conectar, 3000);
-      };
-
-      client.onMessageArrived = (message) => {
-        try {
-          const data = JSON.parse(message.payloadString);
-          for (let i = 1; i <= 8; i++) {
-            const key = 'r' + i;
-            if (data.hasOwnProperty(key)) {
-              const isChecked = data[key] === 1;
-              document.getElementById(`sw-${i}`).checked = isChecked;
-              document.getElementById(`st-${i}`).innerText = isChecked ? "Encendido" : "Apagado";
+        // --- SISTEMA DE AUTENTICACIÓN POR PIN ---
+        function pressPin(num) {
+            if (pinInput.length < 4) {
+                pinInput += num;
+                updatePinDots();
+                if (pinInput.length === 4) setTimeout(checkPin, 100);
             }
-          }
-        } catch (e) { console.error("Error JSON:", e); }
-      };
-      conectar();
-    }
+        }
 
-    function conectar() {
-      client.connect({
-        onSuccess: () => {
-          document.getElementById('status-dot').classList.add('connected');
-          document.getElementById('status-text').innerText = "Conectado globalmente";
-          client.subscribe(TOPIC_ESTADO);
-        },
-        onFailure: () => setTimeout(conectar, 3000),
-        useSSL: true
-      });
-    }
+        function clearPin() {
+            pinInput = "";
+            updatePinDots();
+        }
 
-    function toggleRelay(id) {
-      if (!client || !client.isConnected()) return;
-      const isChecked = document.getElementById(`sw-${id}`).checked;
-      const payload = JSON.stringify({ rele: id, estado: isChecked ? 1 : 0 });
-      const message = new Paho.MQTT.Message(payload);
-      message.destinationName = TOPIC_CONTROL;
-      client.send(message);
-    }
+        function updatePinDots() {
+            const dots = document.querySelectorAll('.pin-dot');
+            dots.forEach((dot, index) => {
+                if (index < pinInput.length) dot.classList.add('filled');
+                else dot.classList.remove('filled');
+            });
+        }
 
-    function setAll(state) {
-      if (!client || !client.isConnected()) return;
-      const payload = JSON.stringify({ rele: 0, estado: state ? 1 : 0 });
-      const message = new Paho.MQTT.Message(payload);
-      message.destinationName = TOPIC_CONTROL;
-      client.send(message);
-    }
-  </script>
+        function checkPin() {
+            if (pinInput === MASTER_PIN) {
+                document.getElementById('pinScreen').classList.add('hidden');
+                document.getElementById('dashboardSection').classList.remove('hidden');
+                renderRelayCards();
+                initMQTTConnection();
+            } else {
+                alert("PIN de seguridad incorrecto.");
+                clearPin();
+            }
+        }
+
+        function lockSystem() {
+            clearPin();
+            document.getElementById('dashboardSection').classList.add('hidden');
+            document.getElementById('pinScreen').classList.remove('hidden');
+        }
+
+        // --- GENERADOR DINÁMICO DE INTERFAZ ---
+        function renderRelayCards() {
+            const grid = document.getElementById('relayGrid');
+            grid.innerHTML = "";
+
+            for (let i = 1; i <= 8; i++) {
+                grid.innerHTML += `
+                    <div class="relay-card" id="card-${i}">
+                        <div class="relay-top">
+                            <div class="relay-icon">
+                                <svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9v1z"/></svg>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="switch-${i}" onchange="userToggleRelay(${i})">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div>
+                            <div class="relay-name">Relé ${i}</div>
+                            <div class="relay-status-text" id="statusText-${i}">Apagado</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // --- LÓGICA DE CONEXIÓN MQTT EN TIEMPO REAL ---
+        function initMQTTConnection() {
+            const clientId = "WebClient_Pro_" + Math.random().toString(16).substr(2, 8);
+
+            client = mqtt.connect(MQTT_BROKER, {
+                clientId: clientId,
+                clean: true,
+                reconnectPeriod: 2500
+            });
+
+            client.on('connect', () => {
+                document.getElementById('statusDot').classList.add('connected');
+                document.getElementById('statusText').innerText = "Online";
+                client.subscribe(TOPIC_ESTADO);
+            });
+
+            client.on('offline', () => {
+                document.getElementById('statusDot').classList.remove('connected');
+                document.getElementById('statusText').innerText = "Reconectando...";
+            });
+
+            client.on('message', (topic, payload) => {
+                if (topic === TOPIC_ESTADO) {
+                    try {
+                        const data = JSON.parse(payload.toString());
+                        // Compatible con payload {"r1":1, "r2":0...} o individual {"rele":1, "estado":1}
+                        if (data.rele !== undefined && data.estado !== undefined) {
+                            updateSingleUI(data.rele, data.estado);
+                        } else {
+                            for (let i = 1; i <= 8; i++) {
+                                const key = 'r' + i;
+                                if (data.hasOwnProperty(key)) {
+                                    updateSingleUI(i, data[key]);
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Error al decodificar respuesta MQTT:", e);
+                    }
+                }
+            });
+        }
+
+        // --- COMANDOS Y MANEJO DE ESTADOS ---
+        function userToggleRelay(relayNum) {
+            const switchEl = document.getElementById(`switch-${relayNum}`);
+            const newState = switchEl.checked ? 1 : 0;
+            
+            relayStates[relayNum - 1] = newState;
+            updateSingleUI(relayNum, newState);
+
+            if (client && client.connected) {
+                const payload = JSON.stringify({ rele: relayNum, estado: newState });
+                client.publish(TOPIC_CONTROL, payload);
+            }
+        }
+
+        function sendMasterCommand(state) {
+            for (let i = 1; i <= 8; i++) {
+                relayStates[i - 1] = state;
+                updateSingleUI(i, state);
+            }
+
+            if (client && client.connected) {
+                const payload = JSON.stringify({ rele: 0, estado: state });
+                client.publish(TOPIC_CONTROL, payload);
+            }
+        }
+
+        function updateSingleUI(relayNum, state) {
+            relayStates[relayNum - 1] = state;
+            
+            const card = document.getElementById(`card-${relayNum}`);
+            const switchEl = document.getElementById(`switch-${relayNum}`);
+            const statusText = document.getElementById(`statusText-${relayNum}`);
+
+            if (card && switchEl && statusText) {
+                switchEl.checked = (state === 1);
+                statusText.innerText = state === 1 ? "Encendido" : "Apagado";
+
+                if (state === 1) {
+                    card.classList.add('active');
+                } else {
+                    card.classList.remove('active');
+                }
+            }
+
+            // Actualiza contador activo
+            const activeTotal = relayStates.filter(s => s === 1).length;
+            document.getElementById('activeCount').innerText = activeTotal;
+        }
+    </script>
 </body>
 </html>
 )rawliteral";

@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Control de Relés ESP32 - Leonardo</title>
-    <!-- Cliente MQTT.js vía CDN -->
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
         :root {
@@ -17,153 +16,25 @@
             --off-color: #ef4444;
             --border-radius: 12px;
         }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 480px;
-            background: var(--card-bg);
-            border-radius: var(--border-radius);
-            padding: 24px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            border: 1px solid #334155;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .header h1 {
-            font-size: 1.5rem;
-            color: var(--accent);
-            margin-bottom: 6px;
-        }
-
-        .header p {
-            font-size: 0.85rem;
-            color: var(--text-sub);
-        }
-
-        .status-badge {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 8px;
-            background: #0f172a;
-            border-radius: 20px;
-            margin-top: 12px;
-            font-size: 0.85rem;
-        }
-
-        .dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background-color: var(--off-color);
-        }
-
-        .dot.connected {
-            background-color: var(--on-color);
-            box-shadow: 0 0 8px var(--on-color);
-        }
-
-        /* Modal de Seguridad (PIN) */
-        .pin-modal {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-top: 20px;
-        }
-
-        .pin-modal input {
-            padding: 12px;
-            font-size: 1.2rem;
-            text-align: center;
-            letter-spacing: 4px;
-            border-radius: 8px;
-            border: 1px solid #475569;
-            background: #0f172a;
-            color: white;
-            outline: none;
-        }
-
-        .btn-main {
-            padding: 12px;
-            background: var(--accent);
-            color: #0f172a;
-            font-weight: bold;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .btn-main:hover {
-            opacity: 0.9;
-        }
-
-        /* Relevadores */
-        .relay-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-top: 20px;
-        }
-
-        .relay-card {
-            background: #0f172a;
-            border: 1px solid #334155;
-            padding: 16px;
-            border-radius: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .relay-title {
-            font-weight: 600;
-            font-size: 0.95rem;
-        }
-
-        .toggle-btn {
-            width: 100%;
-            padding: 10px;
-            border: none;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
-            color: white;
-            background-color: #334155;
-            transition: all 0.3s ease;
-        }
-
-        .toggle-btn.active {
-            background-color: var(--on-color);
-            box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
-        }
-
-        .hidden {
-            display: none !important;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .container { width: 100%; max-width: 480px; background: var(--card-bg); border-radius: var(--border-radius); padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid #334155; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h1 { font-size: 1.5rem; color: var(--accent); margin-bottom: 6px; }
+        .header p { font-size: 0.85rem; color: var(--text-sub); }
+        .status-badge { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px; background: #0f172a; border-radius: 20px; margin-top: 12px; font-size: 0.85rem; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; background-color: var(--off-color); }
+        .dot.connected { background-color: var(--on-color); box-shadow: 0 0 8px var(--on-color); }
+        .pin-modal { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+        .pin-modal input { padding: 12px; font-size: 1.2rem; text-align: center; letter-spacing: 4px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: white; outline: none; }
+        .btn-main { padding: 12px; background: var(--accent); color: #0f172a; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .btn-main:hover { opacity: 0.9; }
+        .relay-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 20px; }
+        .relay-card { background: #0f172a; border: 1px solid #334155; padding: 16px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .relay-title { font-weight: 600; font-size: 0.95rem; }
+        .toggle-btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: white; background-color: #334155; transition: all 0.3s ease; }
+        .toggle-btn.active { background-color: var(--on-color); box-shadow: 0 0 10px rgba(34, 197, 94, 0.4); }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -172,14 +43,12 @@
         <div class="header">
             <h1>Control ESP32 LilyGO</h1>
             <p>Conexión segura mediante MQTT WebSockets</p>
-
             <div class="status-badge">
                 <span id="statusDot" class="dot"></span>
                 <span id="statusText">Desconectado del Broker</span>
             </div>
         </div>
 
-        <!-- Pantalla de Login por PIN -->
         <div id="pinSection" class="pin-modal">
             <p style="text-align: center; font-size: 0.9rem; color: var(--text-sub);">Ingresa el PIN de seguridad:</p>
             <input type="password" id="pinInput" placeholder="••••" maxlength="4">
@@ -187,21 +56,16 @@
             <p id="pinError" style="color: var(--off-color); font-size: 0.8rem; text-align: center;" class="hidden">PIN incorrecto</p>
         </div>
 
-        <!-- Panel de Control de Relés -->
         <div id="controlSection" class="hidden">
             <div style="display: flex; justify-content: space-between; margin-top: 15px; margin-bottom: 10px;">
                 <button class="btn-main" style="background:#334155; color:white; font-size:0.75rem; padding:6px 12px;" onclick="sendAll(1)">Encender Todos</button>
                 <button class="btn-main" style="background:#334155; color:white; font-size:0.75rem; padding:6px 12px;" onclick="sendAll(0)">Apagar Todos</button>
             </div>
-
-            <div class="relay-grid" id="relayGrid">
-                <!-- Se generan 8 relés dinámicamente -->
-            </div>
+            <div class="relay-grid" id="relayGrid"></div>
         </div>
     </div>
 
     <script>
-        // Configuración MQTT Broker
         const MQTT_BROKER = "wss://broker.hivemq.com:8884/mqtt";
         const TOPIC_CONTROL = "casa/leonardo/reles/control";
         const TOPIC_ESTADO = "casa/leonardo/reles/estado";
@@ -259,36 +123,43 @@
                 if (topic === TOPIC_ESTADO) {
                     try {
                         const data = JSON.parse(payload.toString());
-                        if (data.rele !== undefined && data.estado !== undefined) {
-                            updateRelayUI(data.rele, data.estado);
+                        for (let i = 1; i <= 8; i++) {
+                            const key = 'r' + i;
+                            if (data.hasOwnProperty(key)) {
+                                updateRelayUI(i, data[key]);
+                            }
                         }
-                    } catch (e) {
-                        console.error("Error al procesar JSON:", e);
-                    }
+                    } catch (e) { console.error("Error JSON:", e); }
                 }
             });
         }
 
         function toggleRelay(relayNum) {
-    // Alterna el estado local inmediatamente (de 0 a 1, o de 1 a 0)
-    relayStates[relayNum - 1] = relayStates[relayNum - 1] === 1 ? 0 : 1;
-    const newState = relayStates[relayNum - 1];
+            // Invierte y guarda el estado localmente
+            const newState = relayStates[relayNum - 1] === 1 ? 0 : 1;
+            relayStates[relayNum - 1] = newState;
+            
+            // Actualiza interfaz local inmediatamente
+            updateRelayUI(relayNum, newState);
 
-    // Actualiza el botón en la pantalla
-    updateRelayUI(relayNum, newState);
+            // Publica comando exacto (1 o 0)
+            const payload = JSON.stringify({
+                rele: relayNum,
+                estado: newState
+            });
 
-    // Envía la orden por MQTT (1 para encender, 0 para apagar)
-    const payload = JSON.stringify({
-        rele: relayNum,
-        estado: newState
-    });
-
-    client.publish(TOPIC_CONTROL, payload);
-}
+            if (client && client.connected) {
+                client.publish(TOPIC_CONTROL, payload);
+            }
+        }
 
         function sendAll(state) {
             for (let i = 1; i <= 8; i++) {
-                client.publish(TOPIC_CONTROL, JSON.stringify({ rele: i, estado: state }));
+                relayStates[i - 1] = state;
+                updateRelayUI(i, state);
+            }
+            if (client && client.connected) {
+                client.publish(TOPIC_CONTROL, JSON.stringify({ rele: 0, estado: state }));
             }
         }
 

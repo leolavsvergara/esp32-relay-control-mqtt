@@ -3,547 +3,454 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Automation Hub | Industrial Relay Controller</title>
+    <title>Smart Automation System | High-Security Hub</title>
     <!-- Cliente MQTT vía CDN -->
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
         :root {
-            --bg-base: #090d16;
-            --surface-card: rgba(22, 30, 46, 0.75);
-            --surface-hover: rgba(30, 41, 59, 0.9);
-            --primary: #38bdf8;
-            --primary-glow: rgba(56, 189, 248, 0.35);
-            --success: #10b981;
-            --success-glow: rgba(16, 185, 129, 0.4);
-            --danger: #ef4444;
-            --text-main: #f8fafc;
-            --text-muted: #64748b;
-            --border-card: rgba(255, 255, 255, 0.08);
-            --radius-lg: 18px;
-            --radius-md: 12px;
+            --bg-deep: #050811;
+            --glass-card: rgba(15, 23, 42, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --neon-blue: #00f2fe;
+            --neon-blue-glow: rgba(0, 242, 254, 0.25);
+            --neon-green: #10b981;
+            --neon-green-glow: rgba(16, 185, 129, 0.3);
+            --neon-red: #f43f5e;
+            --text-primary: #f8fafc;
+            --text-secondary: #64748b;
+            --radius-main: 24px;
+            --radius-btn: 14px;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            background: radial-gradient(circle at 50% 0%, #1e293b 0%, var(--bg-base) 70%);
-            color: var(--text-main);
+            background: radial-gradient(circle at 50% 10%, #1e1b4b 0%, #090d16 50%, var(--bg-deep) 100%);
+            color: var(--text-primary);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 16px;
+            overflow-x: hidden;
         }
 
-        .app-container {
+        /* --- CONTENEDOR PRINCIPAL GLASSMORPHISM --- */
+        .app-vault {
             width: 100%;
-            max-width: 580px;
-            background: var(--surface-card);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-card);
-            border-radius: var(--radius-lg);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
-            padding: 24px;
+            max-width: 480px;
+            background: var(--glass-card);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-main);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            padding: 28px 24px;
             position: relative;
-            overflow: hidden;
+            transition: all 0.4s ease;
         }
 
-        /* --- HEADER & BARRA DE ESTADO --- */
+        /* --- HEADER Y STATUS BAR --- */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid var(--border-card);
-            padding-bottom: 16px;
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
 
-        .brand {
+        .brand-logo {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
 
-        .brand-icon {
-            width: 38px;
-            height: 38px;
-            background: linear-gradient(135deg, var(--primary), #0284c7);
+        .logo-badge {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, rgba(0,242,254,0.2), rgba(79,172,254,0.05));
+            border: 1px solid var(--neon-blue);
             border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 0 15px var(--primary-glow);
+            box-shadow: 0 0 12px var(--neon-blue-glow);
         }
 
-        .brand-icon svg {
-            width: 22px;
-            height: 22px;
-            fill: #ffffff;
-        }
+        .logo-badge svg { width: 20px; height: 20px; fill: var(--neon-blue); }
 
-        .brand-text h1 {
-            font-size: 1.1rem;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-        }
+        .brand-titles h1 { font-size: 1rem; font-weight: 700; letter-spacing: -0.02em; }
+        .brand-titles p { font-size: 0.68rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em; }
 
-        .brand-text p {
-            font-size: 0.72rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .status-badge {
-            display: inline-flex;
+        .net-status {
+            display: flex;
             align-items: center;
             gap: 8px;
-            padding: 6px 14px;
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid var(--border-card);
-            border-radius: 30px;
-            font-size: 0.78rem;
-            font-weight: 500;
+            padding: 6px 12px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
         }
 
         .status-dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background-color: var(--danger);
+            background: var(--neon-red);
             transition: all 0.3s ease;
         }
 
-        .status-dot.connected {
-            background-color: var(--success);
-            box-shadow: 0 0 10px var(--success);
+        .status-dot.active {
+            background: var(--neon-green);
+            box-shadow: 0 0 10px var(--neon-green);
         }
 
-        /* --- PANTALLA DE ACCESO (PIN) --- */
-        .pin-screen {
+        /* --- PANTALLA DE SEGURIDAD ESTÉTICA --- */
+        .security-wrapper {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px 0;
-            text-align: center;
+            padding: 10px 0;
         }
 
-        .pin-screen h2 {
-            font-size: 1.25rem;
-            margin-bottom: 6px;
-        }
-
-        .pin-screen p {
-            font-size: 0.82rem;
-            color: var(--text-muted);
-            margin-bottom: 24px;
-        }
-
-        .pin-display {
+        .shield-icon-ring {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0, 242, 254, 0.1) 0%, transparent 70%);
+            border: 1px dashed rgba(0, 242, 254, 0.3);
             display: flex;
-            gap: 12px;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            animation: pulse-ring 4s infinite ease-in-out;
+        }
+
+        @keyframes pulse-ring {
+            0%, 100% { transform: scale(1); border-color: rgba(0, 242, 254, 0.3); }
+            50% { transform: scale(1.05); border-color: var(--neon-blue); box-shadow: 0 0 20px var(--neon-blue-glow); }
+        }
+
+        .shield-icon-ring svg { width: 36px; height: 36px; fill: var(--neon-blue); }
+
+        .security-title { font-size: 1.15rem; font-weight: 600; margin-bottom: 4px; }
+        .security-subtitle { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 24px; text-align: center; }
+
+        .pin-indicators {
+            display: flex;
+            gap: 16px;
             margin-bottom: 28px;
         }
 
-        .pin-dot {
-            width: 14px;
-            height: 14px;
+        .pin-slot {
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
-            border: 2px solid var(--text-muted);
-            transition: all 0.2s ease;
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            background: transparent;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .pin-dot.filled {
-            background: var(--primary);
-            border-color: var(--primary);
-            box-shadow: 0 0 10px var(--primary-glow);
+        .pin-slot.active {
+            background: var(--neon-blue);
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 12px var(--neon-blue);
+            transform: scale(1.15);
         }
 
-        .keypad {
+        .pin-keypad {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 12px;
             width: 100%;
-            max-width: 280px;
+            max-width: 300px;
         }
 
         .key-btn {
             background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border-card);
-            color: var(--text-main);
-            font-size: 1.25rem;
-            font-weight: 600;
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            font-size: 1.35rem;
+            font-weight: 500;
             padding: 16px;
-            border-radius: var(--radius-md);
+            border-radius: var(--radius-btn);
             cursor: pointer;
+            backdrop-filter: blur(10px);
             transition: all 0.15s ease;
         }
 
         .key-btn:active {
-            background: rgba(56, 189, 248, 0.15);
-            transform: scale(0.95);
+            background: rgba(0, 242, 254, 0.15);
+            border-color: var(--neon-blue);
+            transform: scale(0.94);
         }
 
-        .key-btn.action {
-            font-size: 0.9rem;
-            color: var(--primary);
+        .key-btn.btn-text {
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+        }
+
+        .shake { animation: error-shake 0.4s ease-in-out; }
+
+        @keyframes error-shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
         }
 
         /* --- DASHBOARD PRINCIPAL --- */
-        .stats-bar {
+        .dash-actions {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(15, 23, 42, 0.5);
-            border: 1px solid var(--border-card);
-            border-radius: var(--radius-md);
-            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 14px;
+            border-radius: 14px;
+            border: 1px solid var(--glass-border);
             margin-bottom: 20px;
         }
 
-        .stats-info {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
+        .counter-badge { font-size: 0.8rem; color: var(--text-secondary); }
+        .counter-badge strong { color: var(--text-primary); }
 
-        .stats-info span {
-            color: var(--text-main);
-            font-weight: 700;
-        }
+        .btn-group { display: flex; gap: 8px; }
 
-        .master-controls {
-            display: flex;
-            gap: 8px;
-        }
-
-        .btn-action {
-            border: none;
-            padding: 8px 12px;
+        .action-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            padding: 6px 12px;
             border-radius: 8px;
-            font-size: 0.75rem;
-            font-weight: 700;
+            font-size: 0.72rem;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: 0.2s;
         }
 
-        .btn-all-on {
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--success);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-        }
-
-        .btn-all-on:hover { background: var(--success); color: #fff; }
-
-        .btn-all-off {
-            background: rgba(239, 68, 68, 0.15);
-            color: var(--danger);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
-
-        .btn-all-off:hover { background: var(--danger); color: #fff; }
+        .action-btn.on:hover { background: var(--neon-green); color: #000; border-color: var(--neon-green); }
+        .action-btn.off:hover { background: var(--neon-red); color: #fff; border-color: var(--neon-red); }
 
         .relay-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 14px;
+            gap: 12px;
         }
 
         .relay-card {
-            background: rgba(15, 23, 42, 0.4);
-            border: 1px solid var(--border-card);
-            border-radius: var(--radius-md);
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
             padding: 16px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            height: 110px;
-            transition: all 0.25s ease;
-            position: relative;
+            height: 100px;
+            transition: all 0.3s ease;
         }
 
         .relay-card.active {
-            background: rgba(16, 185, 129, 0.05);
-            border-color: rgba(16, 185, 129, 0.4);
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.08);
+            background: rgba(16, 185, 129, 0.06);
+            border-color: rgba(16, 185, 129, 0.3);
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.08);
         }
 
-        .relay-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-        }
+        .card-top { display: flex; justify-content: space-between; align-items: center; }
+        .relay-label { font-size: 0.88rem; font-weight: 600; }
+        .relay-state { font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px; }
+        .relay-card.active .relay-state { color: var(--neon-green); font-weight: 600; }
 
-        .relay-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.05);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.25s ease;
-        }
-
-        .relay-icon svg {
-            width: 18px;
-            height: 18px;
-            fill: var(--text-muted);
-        }
-
-        .relay-card.active .relay-icon {
-            background: var(--success);
-            box-shadow: 0 0 12px var(--success-glow);
-        }
-
-        .relay-card.active .relay-icon svg {
-            fill: #ffffff;
-        }
-
-        .relay-name {
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-top: 8px;
-        }
-
-        .relay-status-text {
-            font-size: 0.72rem;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-
-        .relay-card.active .relay-status-text {
-            color: var(--success);
-        }
-
-        /* Switch Toggle */
-        .switch {
+        /* Custom Toggle Switch */
+        .toggle-switch {
             position: relative;
-            display: inline-block;
-            width: 44px;
+            width: 42px;
             height: 24px;
         }
 
-        .switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
 
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #334155;
-            transition: .3s;
+        .toggle-slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
             border-radius: 30px;
+            border: 1px solid var(--glass-border);
         }
 
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: .3s;
-            border-radius: 50%;
+        .toggle-slider:before {
+            position: absolute; content: ""; height: 18px; width: 18px; left: 2px; bottom: 2px;
+            background-color: #fff; transition: .3s; border-radius: 50%;
         }
 
-        input:checked + .slider { background-color: var(--success); }
-        input:checked + .slider:before { transform: translateX(20px); }
-
-        .btn-lock {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 0.75rem;
-            padding: 4px 8px;
-            border-radius: 6px;
-            transition: 0.2s;
+        input:checked + .toggle-slider {
+            background-color: var(--neon-green);
+            border-color: var(--neon-green);
+            box-shadow: 0 0 12px var(--neon-green-glow);
         }
 
-        .btn-lock:hover { color: var(--text-main); background: rgba(255, 255, 255, 0.05); }
+        input:checked + .toggle-slider:before { transform: translateX(18px); }
 
         .hidden { display: none !important; }
-
-        @media (max-width: 400px) {
-            .relay-grid { grid-template-columns: 1fr; }
-            .relay-card { height: 90px; }
-        }
     </style>
 </head>
 <body>
 
-    <div class="app-container">
-        <!-- HEADER GENERAL -->
+    <div class="app-vault">
+        <!-- HEADER -->
         <div class="header">
-            <div class="brand">
-                <div class="brand-icon">
-                    <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            <div class="brand-logo">
+                <div class="logo-badge">
+                    <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8s0 0 0 0z"/></svg>
                 </div>
-                <div class="brand-text">
-                    <h1>Control Hub</h1>
-                    <p>ESP32 Automation</p>
+                <div class="brand-titles">
+                    <h1>SISTEMA ESP32</h1>
+                    <p>Control de Relés MQTT</p>
                 </div>
             </div>
-            <div class="status-badge">
+            <div class="net-status">
                 <span id="statusDot" class="status-dot"></span>
-                <span id="statusText">Desconectado</span>
+                <span id="statusText">Offline</span>
             </div>
         </div>
 
-        <!-- MODAL SECURITY PIN -->
-        <div id="pinScreen" class="pin-screen">
-            <h2>Acceso Restringido</h2>
-            <p>Ingresa el código PIN para desbloquear el panel</p>
+        <!-- MÓDULO DE SEGURIDAD ESTÉTICO -->
+        <div id="securityScreen" class="security-wrapper">
+            <div class="shield-icon-ring">
+                <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+            </div>
+            <h2 class="security-title">Acceso Restringido</h2>
+            <p class="security-subtitle">Ingresa el PIN para desbloquear la consola</p>
 
-            <div class="pin-display">
-                <div class="pin-dot"></div>
-                <div class="pin-dot"></div>
-                <div class="pin-dot"></div>
-                <div class="pin-dot"></div>
+            <div class="pin-indicators" id="pinIndicators">
+                <div class="pin-slot"></div>
+                <div class="pin-slot"></div>
+                <div class="pin-slot"></div>
+                <div class="pin-slot"></div>
             </div>
 
-            <div class="keypad">
-                <button class="key-btn" onclick="pressPin('1')">1</button>
-                <button class="key-btn" onclick="pressPin('2')">2</button>
-                <button class="key-btn" onclick="pressPin('3')">3</button>
-                <button class="key-btn" onclick="pressPin('4')">4</button>
-                <button class="key-btn" onclick="pressPin('5')">5</button>
-                <button class="key-btn" onclick="pressPin('6')">6</button>
-                <button class="key-btn" onclick="pressPin('7')">7</button>
-                <button class="key-btn" onclick="pressPin('8')">8</button>
-                <button class="key-btn" onclick="pressPin('9')">9</button>
-                <button class="key-btn action" onclick="clearPin()">BORRAR</button>
-                <button class="key-btn" onclick="pressPin('0')">0</button>
-                <button class="key-btn action" onclick="checkPin()">OK</button>
+            <div class="pin-keypad">
+                <button class="key-btn" onclick="pressKey('1')">1</button>
+                <button class="key-btn" onclick="pressKey('2')">2</button>
+                <button class="key-btn" onclick="pressKey('3')">3</button>
+                <button class="key-btn" onclick="pressKey('4')">4</button>
+                <button class="key-btn" onclick="pressKey('5')">5</button>
+                <button class="key-btn" onclick="pressKey('6')">6</button>
+                <button class="key-btn" onclick="pressKey('7')">7</button>
+                <button class="key-btn" onclick="pressKey('8')">8</button>
+                <button class="key-btn" onclick="pressKey('9')">9</button>
+                <button class="key-btn btn-text" onclick="clearPin()">BORRAR</button>
+                <button class="key-btn" onclick="pressKey('0')">0</button>
+                <button class="key-btn btn-text" style="color:var(--neon-blue)" onclick="validatePin()">OK</button>
             </div>
         </div>
 
-        <!-- DASHBOARD DE CONTROL -->
-        <div id="dashboardSection" class="hidden">
-            <div class="stats-bar">
-                <div class="stats-info">
-                    Canales Activos: <span id="activeCount">0</span> / 8
-                </div>
-                <div class="master-controls">
-                    <button class="btn-action btn-all-on" onclick="sendMasterCommand(1)">ENCENDER TODO</button>
-                    <button class="btn-action btn-all-off" onclick="sendMasterCommand(0)">APAGAR TODO</button>
-                    <button class="btn-lock" onclick="lockSystem()" title="Bloquear Panel">
-                        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
-                    </button>
+        <!-- DASHBOARD DE CONTROL DE RELÉS -->
+        <div id="dashScreen" class="hidden">
+            <div class="dash-actions">
+                <div class="counter-badge">Activos: <strong id="activeCounter">0</strong>/8</div>
+                <div class="btn-group">
+                    <button class="action-btn on" onclick="masterSwitch(1)">ENCENDER TODO</button>
+                    <button class="action-btn off" onclick="masterSwitch(0)">APAGAR TODO</button>
                 </div>
             </div>
 
             <div class="relay-grid" id="relayGrid">
-                <!-- Se inyectan dinámicamente con JS -->
+                <!-- Tarjetas dinámicas generadas por JS -->
             </div>
         </div>
     </div>
 
     <script>
-        // --- CONFIGURACIÓN TÉCNICA DE RED ---
         const MQTT_BROKER = "wss://broker.hivemq.com:8884/mqtt";
         const TOPIC_CONTROL = "casa/leonardo/reles/control";
         const TOPIC_ESTADO = "casa/leonardo/reles/estado";
-        const MASTER_PIN = "1234";
+        const TARGET_PIN = "1234";
 
         let client = null;
-        let pinInput = "";
+        let currentPin = "";
         let relayStates = [0, 0, 0, 0, 0, 0, 0, 0];
 
-        // --- SISTEMA DE AUTENTICACIÓN POR PIN ---
-        function pressPin(num) {
-            if (pinInput.length < 4) {
-                pinInput += num;
-                updatePinDots();
-                if (pinInput.length === 4) setTimeout(checkPin, 100);
+        // LÓGICA DE TECLADO PIN
+        function pressKey(num) {
+            if (currentPin.length < 4) {
+                currentPin += num;
+                updatePinVisuals();
+                if (currentPin.length === 4) setTimeout(validatePin, 120);
             }
         }
 
         function clearPin() {
-            pinInput = "";
-            updatePinDots();
+            currentPin = "";
+            updatePinVisuals();
         }
 
-        function updatePinDots() {
-            const dots = document.querySelectorAll('.pin-dot');
-            dots.forEach((dot, index) => {
-                if (index < pinInput.length) dot.classList.add('filled');
-                else dot.classList.remove('filled');
+        function updatePinVisuals() {
+            const slots = document.querySelectorAll('.pin-slot');
+            slots.forEach((slot, idx) => {
+                if (idx < currentPin.length) slot.classList.add('active');
+                else slot.classList.remove('active');
             });
         }
 
-        function checkPin() {
-            if (pinInput === MASTER_PIN) {
-                document.getElementById('pinScreen').classList.add('hidden');
-                document.getElementById('dashboardSection').classList.remove('hidden');
-                renderRelayCards();
-                initMQTTConnection();
+        function validatePin() {
+            if (currentPin === TARGET_PIN) {
+                document.getElementById('securityScreen').classList.add('hidden');
+                document.getElementById('dashScreen').classList.remove('hidden');
+                renderGridUI();
+                setupMQTT();
             } else {
-                alert("PIN de seguridad incorrecto.");
-                clearPin();
+                const screen = document.getElementById('securityScreen');
+                screen.classList.add('shake');
+                setTimeout(() => {
+                    screen.classList.remove('shake');
+                    clearPin();
+                }, 400);
             }
         }
 
-        function lockSystem() {
-            clearPin();
-            document.getElementById('dashboardSection').classList.add('hidden');
-            document.getElementById('pinScreen').classList.remove('hidden');
-        }
-
-        // --- GENERADOR DINÁMICO DE INTERFAZ ---
-        function renderRelayCards() {
+        // GENERADOR DE INTERFAZ
+        function renderGridUI() {
             const grid = document.getElementById('relayGrid');
             grid.innerHTML = "";
-
             for (let i = 1; i <= 8; i++) {
                 grid.innerHTML += `
                     <div class="relay-card" id="card-${i}">
-                        <div class="relay-top">
-                            <div class="relay-icon">
-                                <svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9v1z"/></svg>
+                        <div class="card-top">
+                            <div>
+                                <div class="relay-label">Relé ${i}</div>
+                                <div class="relay-state" id="lbl-${i}">Apagado</div>
                             </div>
-                            <label class="switch">
-                                <input type="checkbox" id="switch-${i}" onchange="userToggleRelay(${i})">
-                                <span class="slider"></span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="sw-${i}" onchange="toggleRelay(${i})">
+                                <span class="toggle-slider"></span>
                             </label>
-                        </div>
-                        <div>
-                            <div class="relay-name">Relé ${i}</div>
-                            <div class="relay-status-text" id="statusText-${i}">Apagado</div>
                         </div>
                     </div>
                 `;
             }
         }
 
-        // --- LÓGICA DE CONEXIÓN MQTT EN TIEMPO REAL ---
-        function initMQTTConnection() {
-            const clientId = "WebClient_Pro_" + Math.random().toString(16).substr(2, 8);
-
-            client = mqtt.connect(MQTT_BROKER, {
-                clientId: clientId,
-                clean: true,
-                reconnectPeriod: 2500
-            });
+        // COMUNICACIÓN MQTT
+        function setupMQTT() {
+            const clientID = "Web_Secure_" + Math.random().toString(16).substr(2, 8);
+            client = mqtt.connect(MQTT_BROKER, { clientId: clientID, clean: true, reconnectPeriod: 2000 });
 
             client.on('connect', () => {
-                document.getElementById('statusDot').classList.add('connected');
-                document.getElementById('statusText').innerText = "Online";
+                document.getElementById('statusDot').classList.add('active');
+                document.getElementById('statusText').innerText = "Conectado";
                 client.subscribe(TOPIC_ESTADO);
             });
 
             client.on('offline', () => {
-                document.getElementById('statusDot').classList.remove('connected');
+                document.getElementById('statusDot').classList.remove('active');
                 document.getElementById('statusText').innerText = "Reconectando...";
             });
 
@@ -551,71 +458,51 @@
                 if (topic === TOPIC_ESTADO) {
                     try {
                         const data = JSON.parse(payload.toString());
-                        // Compatible con payload {"r1":1, "r2":0...} o individual {"rele":1, "estado":1}
-                        if (data.rele !== undefined && data.estado !== undefined) {
-                            updateSingleUI(data.rele, data.estado);
-                        } else {
-                            for (let i = 1; i <= 8; i++) {
-                                const key = 'r' + i;
-                                if (data.hasOwnProperty(key)) {
-                                    updateSingleUI(i, data[key]);
-                                }
-                            }
+                        for (let i = 1; i <= 8; i++) {
+                            const k = 'r' + i;
+                            if (data.hasOwnProperty(k)) updateCardState(i, data[k]);
                         }
-                    } catch (e) {
-                        console.error("Error al decodificar respuesta MQTT:", e);
-                    }
+                    } catch (e) { console.error(e); }
                 }
             });
         }
 
-        // --- COMANDOS Y MANEJO DE ESTADOS ---
-        function userToggleRelay(relayNum) {
-            const switchEl = document.getElementById(`switch-${relayNum}`);
-            const newState = switchEl.checked ? 1 : 0;
-            
-            relayStates[relayNum - 1] = newState;
-            updateSingleUI(relayNum, newState);
+        function toggleRelay(num) {
+            const isChecked = document.getElementById(`sw-${num}`).checked;
+            const newState = isChecked ? 1 : 0;
+            relayStates[num - 1] = newState;
+            updateCardState(num, newState);
 
             if (client && client.connected) {
-                const payload = JSON.stringify({ rele: relayNum, estado: newState });
-                client.publish(TOPIC_CONTROL, payload);
+                client.publish(TOPIC_CONTROL, JSON.stringify({ rele: num, estado: newState }));
             }
         }
 
-        function sendMasterCommand(state) {
+        function masterSwitch(state) {
             for (let i = 1; i <= 8; i++) {
                 relayStates[i - 1] = state;
-                updateSingleUI(i, state);
+                updateCardState(i, state);
             }
-
             if (client && client.connected) {
-                const payload = JSON.stringify({ rele: 0, estado: state });
-                client.publish(TOPIC_CONTROL, payload);
+                client.publish(TOPIC_CONTROL, JSON.stringify({ rele: 0, estado: state }));
             }
         }
 
-        function updateSingleUI(relayNum, state) {
-            relayStates[relayNum - 1] = state;
-            
-            const card = document.getElementById(`card-${relayNum}`);
-            const switchEl = document.getElementById(`switch-${relayNum}`);
-            const statusText = document.getElementById(`statusText-${relayNum}`);
+        function updateCardState(num, state) {
+            relayStates[num - 1] = state;
+            const card = document.getElementById(`card-${num}`);
+            const sw = document.getElementById(`sw-${num}`);
+            const lbl = document.getElementById(`lbl-${num}`);
 
-            if (card && switchEl && statusText) {
-                switchEl.checked = (state === 1);
-                statusText.innerText = state === 1 ? "Encendido" : "Apagado";
-
-                if (state === 1) {
-                    card.classList.add('active');
-                } else {
-                    card.classList.remove('active');
-                }
+            if (card && sw && lbl) {
+                sw.checked = (state === 1);
+                lbl.innerText = state === 1 ? "Encendido" : "Apagado";
+                if (state === 1) card.classList.add('active');
+                else card.classList.remove('active');
             }
 
-            // Actualiza contador activo
             const activeTotal = relayStates.filter(s => s === 1).length;
-            document.getElementById('activeCount').innerText = activeTotal;
+            document.getElementById('activeCounter').innerText = activeTotal;
         }
     </script>
 </body>

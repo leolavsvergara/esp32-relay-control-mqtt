@@ -270,16 +270,21 @@
         }
 
         function toggleRelay(relayNum) {
-            const currentState = relayStates[relayNum - 1];
-            const newState = currentState === 1 ? 0 : 1;
-            
-            const payload = JSON.stringify({
-                rele: relayNum,
-                estado: newState
-            });
+    // Alterna el estado local inmediatamente (de 0 a 1, o de 1 a 0)
+    relayStates[relayNum - 1] = relayStates[relayNum - 1] === 1 ? 0 : 1;
+    const newState = relayStates[relayNum - 1];
 
-            client.publish(TOPIC_CONTROL, payload);
-        }
+    // Actualiza el botón en la pantalla
+    updateRelayUI(relayNum, newState);
+
+    // Envía la orden por MQTT (1 para encender, 0 para apagar)
+    const payload = JSON.stringify({
+        rele: relayNum,
+        estado: newState
+    });
+
+    client.publish(TOPIC_CONTROL, payload);
+}
 
         function sendAll(state) {
             for (let i = 1; i <= 8; i++) {

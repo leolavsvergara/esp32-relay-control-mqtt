@@ -2,6 +2,7 @@
 #include <WebServer.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
+#include <Preferences.h>
 
 // ================================================================
 // CONFIGURACIÓN DE RED Y MQTT
@@ -16,8 +17,7 @@ const char* topic_control = "casa/leonardo/reles/control";
 const char* topic_estado  = "casa/leonardo/reles/estado";
 
 // ================================================================
-// CONFIGURACIÓN DE PINES
-// LÓGICA INVERTIDA: Active-HIGH (HIGH = ON / LOW = OFF)
+// CONFIGURACIÓN DE PINES (Active-HIGH)
 // ================================================================
 const int RELAY_PINS[8]  = {5, 18, 19, 21, 12, 13, 32, 33};
 const int SWITCH_PINS[8] = {2, 4, 27, 23, 26, 22, 14, 0}; 
@@ -26,21 +26,20 @@ bool relayStates[8]       = {false};
 int lastSwitchStates[8];
 
 unsigned long lastDebounceTime[8] = {0};
-const unsigned long debounceDelay  = 50; // Filtro de rebote mecánico en ms
+const unsigned long debounceDelay  = 50; 
 
-// Temporizador de estabilización inicial (3 segundos anti-falsos disparos)
 unsigned long bootTime = 0;
 const unsigned long bootDelay = 3000; 
 
-// Temporizador para reconexión MQTT no bloqueante
 unsigned long lastMqttReconnectAttempt = 0;
 
 WiFiClient espClient;
 PubSubClient client(espClient);
 WebServer server(80);
+Preferences preferences;
 
 // ================================================================
-// CÓDIGO HTML / CSS / JS ALMACENADO EN MEMORIA FLASH (PROGMEM)
+// INTERFAZ WEB HTML / CSS / JS EN PROGMEM
 // ================================================================
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
@@ -92,13 +91,23 @@ const char index_html[] PROGMEM = R"rawliteral(
         .key-btn.btn-text { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.05em; color: var(--text-secondary); }
         .shake { animation: error-shake 0.4s ease-in-out; }
         @keyframes error-shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
-        .dash-actions { display: flex; justify-content: space-between; align-items: center; background: rgba(0, 0, 0, 0.3); padding: 10px 14px; border-radius: 14px; border: 1px solid var(--glass-border); margin-bottom: 20px; }
+        
+        .dash-actions { display: flex; justify-content: space-between; align-items: center; background: rgba(0, 0, 0, 0.3); padding: 10px 14px; border-radius: 14px; border: 1px solid var(--glass-border); margin-bottom: 12px; }
         .counter-badge { font-size: 0.8rem; color: var(--text-secondary); }
         .counter-badge strong { color: var(--text-primary); }
         .btn-group { display: flex; gap: 8px; }
         .action-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); color: var(--text-primary); padding: 6px 12px; border-radius: 8px; font-size: 0.72rem; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .action-btn.on:hover { background: var(--neon-green); color: #000; border-color: var(--neon-green); }
         .action-btn.off:hover { background: var(--neon-red); color: #fff; border-color: var(--neon-red); }
+        
+        .voice-bar { display: flex; align-items: center; justify-content: space-between; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--glass-border); border-radius: 14px; padding: 8px 14px; margin-bottom: 16px; }
+        .voice-btn { background: rgba(0, 242, 254, 0.1); border: 1px solid var(--neon-blue); border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; }
+        .voice-btn svg { width: 18px; height: 18px; fill: var(--neon-blue); }
+        .voice-btn.listening { background: var(--neon-red); border-color: var(--neon-red); animation: mic-pulse 1.2s infinite; }
+        .voice-btn.listening svg { fill: #fff; }
+        @keyframes mic-pulse { 0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.6); } 70% { box-shadow: 0 0 0 10px rgba(244, 63, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); } }
+        .voice-status { font-size: 0.75rem; color: var(--text-secondary); font-style: italic; }
+
         .relay-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
         .relay-card { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--glass-border); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; height: 100px; transition: all 0.3s ease; }
         .relay-card.active { background: rgba(16, 185, 129, 0.06); border-color: rgba(16, 185, 129, 0.3); box-shadow: 0 4px 20px rgba(16, 185, 129, 0.08); }
@@ -171,6 +180,14 @@ const char index_html[] PROGMEM = R"rawliteral(
                     <button class="action-btn off" onclick="masterSwitch(0)">APAGAR TODO</button>
                 </div>
             </div>
+
+            <div class="voice-bar">
+                <button class="voice-btn" id="micBtn" onclick="toggleVoiceRecognition()">
+                    <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+                </button>
+                <span class="voice-status" id="voiceStatus">Presiona el micro para hablar...</span>
+            </div>
+
             <div class="relay-grid" id="relayGrid"></div>
         </div>
     </div>
@@ -184,6 +201,8 @@ const char index_html[] PROGMEM = R"rawliteral(
         let client = null;
         let currentPin = "";
         let relayStates = [0, 0, 0, 0, 0, 0, 0, 0];
+        let recognition = null;
+        let isListening = false;
 
         function pressKey(num) {
             if (currentPin.length < 4) {
@@ -209,6 +228,7 @@ const char index_html[] PROGMEM = R"rawliteral(
                 document.getElementById('dashScreen').classList.remove('hidden');
                 renderGridUI();
                 setupMQTT();
+                initVoiceRecognition();
             } else {
                 const screen = document.getElementById('securityScreen');
                 screen.classList.add('shake');
@@ -302,6 +322,93 @@ const char index_html[] PROGMEM = R"rawliteral(
             const activeTotal = relayStates.filter(s => s === 1).length;
             document.getElementById('activeCounter').innerText = activeTotal;
         }
+
+        function initVoiceRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                document.getElementById('voiceStatus').innerText = "Voz no soportada en este navegador";
+                document.getElementById('micBtn').style.opacity = "0.3";
+                return;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.lang = 'es-ES';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onstart = () => {
+                isListening = true;
+                document.getElementById('micBtn').classList.add('listening');
+                document.getElementById('voiceStatus').innerText = "Escuchando comando...";
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                document.getElementById('micBtn').classList.remove('listening');
+            };
+
+            recognition.onerror = (e) => {
+                document.getElementById('voiceStatus').innerText = "Error o sin permiso de micrófono";
+            };
+
+            recognition.onresult = (event) => {
+                const text = event.results[0][0].transcript.toLowerCase();
+                document.getElementById('voiceStatus').innerText = `"${text}"`;
+                processVoiceCommand(text);
+            };
+        }
+
+        function toggleVoiceRecognition() {
+            if (!recognition) return;
+            if (isListening) recognition.stop();
+            else recognition.start();
+        }
+
+        function processVoiceCommand(cmd) {
+            if (cmd.includes("encender todo") || cmd.includes("prender todo")) {
+                masterSwitch(1);
+                return;
+            }
+            if (cmd.includes("apagar todo")) {
+                masterSwitch(0);
+                return;
+            }
+
+            const numberMap = {
+                "uno": 1, "1": 1,
+                "dos": 2, "2": 2,
+                "tres": 3, "3": 3,
+                "cuatro": 4, "4": 4,
+                "cinco": 5, "5": 5,
+                "seis": 6, "6": 6,
+                "siete": 7, "7": 7,
+                "ocho": 8, "8": 8
+            };
+
+            let targetRelay = null;
+            for (let key in numberMap) {
+                if (cmd.includes(key)) {
+                    targetRelay = numberMap[key];
+                    break;
+                }
+            }
+
+            if (targetRelay) {
+                if (cmd.includes("encender") || cmd.includes("prender") || cmd.includes("activa")) {
+                    setRelayStateByVoice(targetRelay, 1);
+                } else if (cmd.includes("apagar") || cmd.includes("desactiva")) {
+                    setRelayStateByVoice(targetRelay, 0);
+                }
+            }
+        }
+
+        function setRelayStateByVoice(num, state) {
+            const sw = document.getElementById(`sw-${num}`);
+            if (sw && sw.checked !== (state === 1)) {
+                sw.checked = (state === 1);
+                toggleRelay(num);
+            }
+        }
     </script>
 </body>
 </html>
@@ -313,6 +420,7 @@ void reconnectMQTT();
 void callbackMQTT(char* topic, byte* payload, unsigned int length);
 void checkPhysicalSwitches();
 void publicarEstado();
+void guardarEstadosNVS();
 
 // ================================================================
 // SETUP
@@ -320,44 +428,47 @@ void publicarEstado();
 void setup() {
   Serial.begin(115200);
 
-  // 1. PROTECCIÓN ANTI-MICROPARPADEO EN EL ARRANQUE:
-  // Se fuerza el estado LOW antes y después de definir el pin como OUTPUT
+  // Inicializar espacio de memoria 'reles' en NVS
+  preferences.begin("reles", false);
+
+  // Recuperar estados anteriores guardados en Flash
   for (int i = 0; i < 8; i++) {
-    digitalWrite(RELAY_PINS[i], LOW); 
+    String key = "r" + String(i + 1);
+    relayStates[i] = preferences.getBool(key.c_str(), false);
+
+    digitalWrite(RELAY_PINS[i], relayStates[i] ? HIGH : LOW);
     pinMode(RELAY_PINS[i], OUTPUT);
-    digitalWrite(RELAY_PINS[i], LOW); // Active-HIGH: LOW = Apagado garantizado
+    digitalWrite(RELAY_PINS[i], relayStates[i] ? HIGH : LOW);
 
     pinMode(SWITCH_PINS[i], INPUT_PULLUP);
   }
 
   setupWifi();
 
-  // Lectura del estado real inicial de los interruptores tras conectar Wi-Fi
   for (int i = 0; i < 8; i++) {
     lastSwitchStates[i] = digitalRead(SWITCH_PINS[i]);
   }
 
-  // Servidor Web Local
+  // CORRECCIÓN: Servidor Web con lectura segura desde PROGMEM (send_P) y charset UTF-8
   server.on("/", []() {
-    server.send(200, "text/html", index_html);
+    server.send_P(200, "text/html; charset=utf-8", index_html);
   });
+  
   server.begin();
   Serial.println("Servidor Web iniciado en puerto 80.");
 
-  // Cliente MQTT
   client.setServer(mqtt_broker, mqtt_port);
   client.setCallback(callbackMQTT);
 
-  bootTime = millis(); // Marca de tiempo para inicio de protección anti-ruido
+  bootTime = millis();
 }
 
 // ================================================================
 // LOOP PRINCIPAL
 // ================================================================
 void loop() {
-  server.handleClient(); // Atiende peticiones web locales
+  server.handleClient();
 
-  // Reconexión MQTT no bloqueante (evita pausar el microcontrolador)
   if (!client.connected()) {
     unsigned long now = millis();
     if (now - lastMqttReconnectAttempt > 5000) {
@@ -368,7 +479,7 @@ void loop() {
     client.loop();
   }
 
-  checkPhysicalSwitches(); // Monitorea los interruptores físicos
+  checkPhysicalSwitches();
 }
 
 // ================================================================
@@ -407,7 +518,7 @@ void reconnectMQTT() {
 }
 
 // ================================================================
-// RECEPCIÓN DE COMANDOS MQTT DESDE LA WEB
+// RECEPCIÓN DE COMANDOS MQTT
 // ================================================================
 void callbackMQTT(char* topic, byte* payload, unsigned int length) {
   StaticJsonDocument<256> doc;
@@ -422,7 +533,12 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length) {
   int rele = doc["rele"];      
   int estado = doc["estado"];  
 
-  // LÓGICA INVERTIDA (Active-HIGH): estado 1 = HIGH (Encendido), estado 0 = LOW (Apagado)
+  // Comando 99: La web acaba de abrirse y pide sincronizar estados
+  if (rele == 99) {
+    publicarEstado();
+    return;
+  }
+
   if (rele >= 1 && rele <= 8) {
     int idx = rele - 1;
     relayStates[idx] = (estado == 1);
@@ -435,6 +551,7 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length) {
     }
   }
 
+  guardarEstadosNVS();
   publicarEstado();
 }
 
@@ -442,7 +559,6 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length) {
 // LECTURA DE INTERRUPTORES FÍSICOS CON ANTI-RUIDO
 // ================================================================
 void checkPhysicalSwitches() {
-  // Filtro de estabilización: Ignora lecturas los primeros 3 segundos tras encender
   if (millis() - bootTime < bootDelay) return;
 
   for (int i = 0; i < 8; i++) {
@@ -454,10 +570,9 @@ void checkPhysicalSwitches() {
         lastSwitchStates[i] = currentState;
 
         relayStates[i] = !relayStates[i];
-        
-        // LÓGICA INVERTIDA (Active-HIGH): HIGH = Encendido, LOW = Apagado
         digitalWrite(RELAY_PINS[i], relayStates[i] ? HIGH : LOW);
 
+        guardarEstadosNVS();
         publicarEstado();
       }
     }
@@ -465,8 +580,15 @@ void checkPhysicalSwitches() {
 }
 
 // ================================================================
-// PUBLICACIÓN DEL ESTADO ACTUAL A LA WEB
+// GUARDADO NO VOLÁTIL Y PUBLICACIÓN MQTT
 // ================================================================
+void guardarEstadosNVS() {
+  for (int i = 0; i < 8; i++) {
+    String key = "r" + String(i + 1);
+    preferences.putBool(key.c_str(), relayStates[i]);
+  }
+}
+
 void publicarEstado() {
   StaticJsonDocument<256> doc;
   for (int i = 0; i < 8; i++) {
@@ -475,5 +597,8 @@ void publicarEstado() {
 
   char buffer[256];
   serializeJson(doc, buffer);
-  client.publish(topic_estado, buffer);
+  
+  // El 3er parámetro 'true' le dice al broker MQTT que guarde este mensaje (RETAIN)
+  // Así, cualquier celular que abra la web recibe el estado de inmediato.
+  client.publish(topic_estado, buffer, true);
 }

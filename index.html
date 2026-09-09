@@ -223,9 +223,12 @@
             client = mqtt.connect(MQTT_BROKER, { clientId: clientID, clean: true, reconnectPeriod: 2000 });
 
             client.on('connect', () => {
-                document.getElementById('statusDot').classList.add('active');
-                document.getElementById('statusText').innerText = "Conectado";
-                client.subscribe(TOPIC_ESTADO);
+          document.getElementById('statusDot').classList.add('active');
+          document.getElementById('statusText').innerText = "Conectado";
+          client.subscribe(TOPIC_ESTADO);
+    
+    // Novedad: Pide al ESP32 que reporte el estado de todos los relés al entrar//
+            client.publish(TOPIC_CONTROL, JSON.stringify({ rele: 99, estado: 0 }));
             });
 
             client.on('offline', () => {

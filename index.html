@@ -41,7 +41,6 @@
             overflow-x: hidden;
         }
 
-        /* --- CONTENEDOR PRINCIPAL GLASSMORPHISM --- */
         .app-vault {
             width: 100%;
             max-width: 480px;
@@ -56,7 +55,6 @@
             transition: all 0.4s ease;
         }
 
-        /* --- HEADER Y STATUS BAR --- */
         .header {
             display: flex;
             justify-content: space-between;
@@ -112,7 +110,6 @@
             box-shadow: 0 0 10px var(--neon-green);
         }
 
-        /* --- PANTALLA DE SEGURIDAD ESTÉTICA --- */
         .security-wrapper {
             display: flex;
             flex-direction: column;
@@ -207,7 +204,6 @@
             40%, 80% { transform: translateX(8px); }
         }
 
-        /* --- DASHBOARD PRINCIPAL --- */
         .dash-actions {
             display: flex;
             justify-content: space-between;
@@ -268,7 +264,6 @@
         .relay-state { font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px; }
         .relay-card.active .relay-state { color: var(--neon-green); font-weight: 600; }
 
-        /* Custom Toggle Switch */
         .toggle-switch {
             position: relative;
             width: 42px;
@@ -304,7 +299,6 @@
 <body>
 
     <div class="app-vault">
-        <!-- HEADER -->
         <div class="header">
             <div class="brand-logo">
                 <div class="logo-badge">
@@ -321,7 +315,7 @@
             </div>
         </div>
 
-        <!-- MÓDULO DE SEGURIDAD ESTÉTICO -->
+        <!-- MÓDULO DE SEGURIDAD CON PIN -->
         <div id="securityScreen" class="security-wrapper">
             <div class="shield-icon-ring">
                 <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
@@ -352,7 +346,7 @@
             </div>
         </div>
 
-        <!-- DASHBOARD DE CONTROL DE RELÉS -->
+        <!-- DASHBOARD DE CONTROL SINCRO CON INTERRUPTORES -->
         <div id="dashScreen" class="hidden">
             <div class="dash-actions">
                 <div class="counter-badge">Activos: <strong id="activeCounter">0</strong>/8</div>
@@ -363,7 +357,7 @@
             </div>
 
             <div class="relay-grid" id="relayGrid">
-                <!-- Tarjetas dinámicas generadas por JS -->
+                <!-- Se renderiza vía JS -->
             </div>
         </div>
     </div>
@@ -378,7 +372,6 @@
         let currentPin = "";
         let relayStates = [0, 0, 0, 0, 0, 0, 0, 0];
 
-        // LÓGICA DE TECLADO PIN
         function pressKey(num) {
             if (currentPin.length < 4) {
                 currentPin += num;
@@ -416,7 +409,6 @@
             }
         }
 
-        // GENERADOR DE INTERFAZ
         function renderGridUI() {
             const grid = document.getElementById('relayGrid');
             grid.innerHTML = "";
@@ -438,7 +430,6 @@
             }
         }
 
-        // COMUNICACIÓN MQTT
         function setupMQTT() {
             const clientID = "Web_Secure_" + Math.random().toString(16).substr(2, 8);
             client = mqtt.connect(MQTT_BROKER, { clientId: clientID, clean: true, reconnectPeriod: 2000 });

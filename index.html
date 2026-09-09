@@ -1,10 +1,10 @@
+const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Smart Automation System | High-Security Hub</title>
-    <!-- Cliente MQTT vía CDN -->
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
         :root {
@@ -21,283 +21,68 @@
             --radius-main: 24px;
             --radius-btn: 14px;
         }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            background: radial-gradient(circle at 50% 10%, #1e1b4b 0%, #090d16 50%, var(--bg-deep) 100%);
-            color: var(--text-primary);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 16px;
-            overflow-x: hidden;
-        }
-
-        .app-vault {
-            width: 100%;
-            max-width: 480px;
-            background: var(--glass-card);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid var(--glass-border);
-            border-radius: var(--radius-main);
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            padding: 28px 24px;
-            position: relative;
-            transition: all 0.4s ease;
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-        }
-
-        .brand-logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .logo-badge {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, rgba(0,242,254,0.2), rgba(79,172,254,0.05));
-            border: 1px solid var(--neon-blue);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 12px var(--neon-blue-glow);
-        }
-
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background: radial-gradient(circle at 50% 10%, #1e1b4b 0%, #090d16 50%, var(--bg-deep) 100%); color: var(--text-primary); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; overflow-x: hidden; }
+        .app-vault { width: 100%; max-width: 480px; background: var(--glass-card); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid var(--glass-border); border-radius: var(--radius-main); box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1); padding: 28px 24px; position: relative; transition: all 0.4s ease; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .brand-logo { display: flex; align-items: center; gap: 10px; }
+        .logo-badge { width: 36px; height: 36px; background: linear-gradient(135deg, rgba(0,242,254,0.2), rgba(79,172,254,0.05)); border: 1px solid var(--neon-blue); border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px var(--neon-blue-glow); }
         .logo-badge svg { width: 20px; height: 20px; fill: var(--neon-blue); }
-
         .brand-titles h1 { font-size: 1rem; font-weight: 700; letter-spacing: -0.02em; }
         .brand-titles p { font-size: 0.68rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em; }
-
-        .net-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 12px;
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--neon-red);
-            transition: all 0.3s ease;
-        }
-
-        .status-dot.active {
-            background: var(--neon-green);
-            box-shadow: 0 0 10px var(--neon-green);
-        }
-
-        .security-wrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 10px 0;
-        }
-
-        .shield-icon-ring {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(0, 242, 254, 0.1) 0%, transparent 70%);
-            border: 1px dashed rgba(0, 242, 254, 0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 16px;
-            animation: pulse-ring 4s infinite ease-in-out;
-        }
-
-        @keyframes pulse-ring {
-            0%, 100% { transform: scale(1); border-color: rgba(0, 242, 254, 0.3); }
-            50% { transform: scale(1.05); border-color: var(--neon-blue); box-shadow: 0 0 20px var(--neon-blue-glow); }
-        }
-
+        .net-status { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--glass-border); border-radius: 20px; font-size: 0.75rem; color: var(--text-secondary); }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--neon-red); transition: all 0.3s ease; }
+        .status-dot.active { background: var(--neon-green); box-shadow: 0 0 10px var(--neon-green); }
+        .security-wrapper { display: flex; flex-direction: column; align-items: center; padding: 10px 0; }
+        .shield-icon-ring { width: 80px; height: 80px; border-radius: 50%; background: radial-gradient(circle, rgba(0, 242, 254, 0.1) 0%, transparent 70%); border: 1px dashed rgba(0, 242, 254, 0.3); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; animation: pulse-ring 4s infinite ease-in-out; }
+        @keyframes pulse-ring { 0%, 100% { transform: scale(1); border-color: rgba(0, 242, 254, 0.3); } 50% { transform: scale(1.05); border-color: var(--neon-blue); box-shadow: 0 0 20px var(--neon-blue-glow); } }
         .shield-icon-ring svg { width: 36px; height: 36px; fill: var(--neon-blue); }
-
         .security-title { font-size: 1.15rem; font-weight: 600; margin-bottom: 4px; }
         .security-subtitle { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 24px; text-align: center; }
-
-        .pin-indicators {
-            display: flex;
-            gap: 16px;
-            margin-bottom: 28px;
-        }
-
-        .pin-slot {
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            border: 2px solid rgba(255, 255, 255, 0.15);
-            background: transparent;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .pin-slot.active {
-            background: var(--neon-blue);
-            border-color: var(--neon-blue);
-            box-shadow: 0 0 12px var(--neon-blue);
-            transform: scale(1.15);
-        }
-
-        .pin-keypad {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            width: 100%;
-            max-width: 300px;
-        }
-
-        .key-btn {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--glass-border);
-            color: var(--text-primary);
-            font-size: 1.35rem;
-            font-weight: 500;
-            padding: 16px;
-            border-radius: var(--radius-btn);
-            cursor: pointer;
-            backdrop-filter: blur(10px);
-            transition: all 0.15s ease;
-        }
-
-        .key-btn:active {
-            background: rgba(0, 242, 254, 0.15);
-            border-color: var(--neon-blue);
-            transform: scale(0.94);
-        }
-
-        .key-btn.btn-text {
-            font-size: 0.8rem;
-            font-weight: 600;
-            letter-spacing: 0.05em;
-            color: var(--text-secondary);
-        }
-
+        .pin-indicators { display: flex; gap: 16px; margin-bottom: 28px; }
+        .pin-slot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.15); background: transparent; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .pin-slot.active { background: var(--neon-blue); border-color: var(--neon-blue); box-shadow: 0 0 12px var(--neon-blue); transform: scale(1.15); }
+        .pin-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; max-width: 300px; }
+        .key-btn { background: rgba(255, 255, 255, 0.03); border: 1px solid var(--glass-border); color: var(--text-primary); font-size: 1.35rem; font-weight: 500; padding: 16px; border-radius: var(--radius-btn); cursor: pointer; backdrop-filter: blur(10px); transition: all 0.15s ease; }
+        .key-btn:active { background: rgba(0, 242, 254, 0.15); border-color: var(--neon-blue); transform: scale(0.94); }
+        .key-btn.btn-text { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.05em; color: var(--text-secondary); }
         .shake { animation: error-shake 0.4s ease-in-out; }
-
-        @keyframes error-shake {
-            0%, 100% { transform: translateX(0); }
-            20%, 60% { transform: translateX(-8px); }
-            40%, 80% { transform: translateX(8px); }
-        }
-
-        .dash-actions {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 10px 14px;
-            border-radius: 14px;
-            border: 1px solid var(--glass-border);
-            margin-bottom: 20px;
-        }
-
+        @keyframes error-shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+        
+        /* ESTILOS PANEL Y VOZ */
+        .dash-actions { display: flex; justify-content: space-between; align-items: center; background: rgba(0, 0, 0, 0.3); padding: 10px 14px; border-radius: 14px; border: 1px solid var(--glass-border); margin-bottom: 12px; }
         .counter-badge { font-size: 0.8rem; color: var(--text-secondary); }
         .counter-badge strong { color: var(--text-primary); }
-
         .btn-group { display: flex; gap: 8px; }
-
-        .action-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--glass-border);
-            color: var(--text-primary);
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 0.72rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
+        .action-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); color: var(--text-primary); padding: 6px 12px; border-radius: 8px; font-size: 0.72rem; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .action-btn.on:hover { background: var(--neon-green); color: #000; border-color: var(--neon-green); }
         .action-btn.off:hover { background: var(--neon-red); color: #fff; border-color: var(--neon-red); }
+        
+        .voice-bar { display: flex; align-items: center; justify-content: space-between; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--glass-border); border-radius: 14px; padding: 8px 14px; margin-bottom: 16px; }
+        .voice-btn { background: rgba(0, 242, 254, 0.1); border: 1px solid var(--neon-blue); border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; }
+        .voice-btn svg { width: 18px; height: 18px; fill: var(--neon-blue); }
+        .voice-btn.listening { background: var(--neon-red); border-color: var(--neon-red); animation: mic-pulse 1.2s infinite; }
+        .voice-btn.listening svg { fill: #fff; }
+        @keyframes mic-pulse { 0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.6); } 70% { box-shadow: 0 0 0 10px rgba(244, 63, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); } }
+        .voice-status { font-size: 0.75rem; color: var(--text-secondary); font-style: italic; }
 
-        .relay-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-        }
-
-        .relay-card {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--glass-border);
-            border-radius: 16px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            height: 100px;
-            transition: all 0.3s ease;
-        }
-
-        .relay-card.active {
-            background: rgba(16, 185, 129, 0.06);
-            border-color: rgba(16, 185, 129, 0.3);
-            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.08);
-        }
-
+        .relay-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .relay-card { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--glass-border); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; height: 100px; transition: all 0.3s ease; }
+        .relay-card.active { background: rgba(16, 185, 129, 0.06); border-color: rgba(16, 185, 129, 0.3); box-shadow: 0 4px 20px rgba(16, 185, 129, 0.08); }
         .card-top { display: flex; justify-content: space-between; align-items: center; }
         .relay-label { font-size: 0.88rem; font-weight: 600; }
         .relay-state { font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px; }
         .relay-card.active .relay-state { color: var(--neon-green); font-weight: 600; }
-
-        .toggle-switch {
-            position: relative;
-            width: 42px;
-            height: 24px;
-        }
-
+        .toggle-switch { position: relative; width: 42px; height: 24px; }
         .toggle-switch input { opacity: 0; width: 0; height: 0; }
-
-        .toggle-slider {
-            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-            background-color: rgba(255, 255, 255, 0.1);
-            transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 30px;
-            border: 1px solid var(--glass-border);
-        }
-
-        .toggle-slider:before {
-            position: absolute; content: ""; height: 18px; width: 18px; left: 2px; bottom: 2px;
-            background-color: #fff; transition: .3s; border-radius: 50%;
-        }
-
-        input:checked + .toggle-slider {
-            background-color: var(--neon-green);
-            border-color: var(--neon-green);
-            box-shadow: 0 0 12px var(--neon-green-glow);
-        }
-
+        .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255, 255, 255, 0.1); transition: .3s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 30px; border: 1px solid var(--glass-border); }
+        .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 2px; bottom: 2px; background-color: #fff; transition: .3s; border-radius: 50%; }
+        input:checked + .toggle-slider { background-color: var(--neon-green); border-color: var(--neon-green); box-shadow: 0 0 12px var(--neon-green-glow); }
         input:checked + .toggle-slider:before { transform: translateX(18px); }
-
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
-
     <div class="app-vault">
         <div class="header">
             <div class="brand-logo">
@@ -315,7 +100,7 @@
             </div>
         </div>
 
-        <!-- MÓDULO DE SEGURIDAD CON PIN -->
+        <!-- PANTALLA DE SEGURIDAD -->
         <div id="securityScreen" class="security-wrapper">
             <div class="shield-icon-ring">
                 <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
@@ -346,7 +131,7 @@
             </div>
         </div>
 
-        <!-- DASHBOARD DE CONTROL SINCRO CON INTERRUPTORES -->
+        <!-- PANEL DE CONTROL -->
         <div id="dashScreen" class="hidden">
             <div class="dash-actions">
                 <div class="counter-badge">Activos: <strong id="activeCounter">0</strong>/8</div>
@@ -356,9 +141,15 @@
                 </div>
             </div>
 
-            <div class="relay-grid" id="relayGrid">
-                <!-- Se renderiza vía JS -->
+            <!-- BARRA DE CONTROL POR VOZ -->
+            <div class="voice-bar">
+                <button class="voice-btn" id="micBtn" onclick="toggleVoiceRecognition()">
+                    <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+                </button>
+                <span class="voice-status" id="voiceStatus">Presiona el micro para hablar...</span>
             </div>
+
+            <div class="relay-grid" id="relayGrid"></div>
         </div>
     </div>
 
@@ -371,6 +162,8 @@
         let client = null;
         let currentPin = "";
         let relayStates = [0, 0, 0, 0, 0, 0, 0, 0];
+        let recognition = null;
+        let isListening = false;
 
         function pressKey(num) {
             if (currentPin.length < 4) {
@@ -380,10 +173,7 @@
             }
         }
 
-        function clearPin() {
-            currentPin = "";
-            updatePinVisuals();
-        }
+        function clearPin() { currentPin = ""; updatePinVisuals(); }
 
         function updatePinVisuals() {
             const slots = document.querySelectorAll('.pin-slot');
@@ -399,13 +189,11 @@
                 document.getElementById('dashScreen').classList.remove('hidden');
                 renderGridUI();
                 setupMQTT();
+                initVoiceRecognition();
             } else {
                 const screen = document.getElementById('securityScreen');
                 screen.classList.add('shake');
-                setTimeout(() => {
-                    screen.classList.remove('shake');
-                    clearPin();
-                }, 400);
+                setTimeout(() => { screen.classList.remove('shake'); clearPin(); }, 400);
             }
         }
 
@@ -495,6 +283,102 @@
             const activeTotal = relayStates.filter(s => s === 1).length;
             document.getElementById('activeCounter').innerText = activeTotal;
         }
+
+        /* ================================================================
+           LÓGICA DE RECONOCIMIENTO DE VOZ (WEB SPEECH API)
+           ================================================================ */
+        function initVoiceRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                document.getElementById('voiceStatus').innerText = "Voz no soportada en este navegador";
+                document.getElementById('micBtn').style.opacity = "0.3";
+                return;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.lang = 'es-ES';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onstart = () => {
+                isListening = true;
+                document.getElementById('micBtn').classList.add('listening');
+                document.getElementById('voiceStatus').innerText = "Escuchando comando...";
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                document.getElementById('micBtn').classList.remove('listening');
+            };
+
+            recognition.onerror = (e) => {
+                document.getElementById('voiceStatus').innerText = "Error o sin permiso de micrófono";
+            };
+
+            recognition.onresult = (event) => {
+                const text = event.results[0][0].transcript.toLowerCase();
+                document.getElementById('voiceStatus').innerText = `"${text}"`;
+                processVoiceCommand(text);
+            };
+        }
+
+        function toggleVoiceRecognition() {
+            if (!recognition) return;
+            if (isListening) recognition.stop();
+            else recognition.start();
+        }
+
+        function processVoiceCommand(cmd) {
+            // Comandos Globales
+            if (cmd.includes("encender todo") || cmd.includes("prender todo")) {
+                masterSwitch(1);
+                return;
+            }
+            if (cmd.includes("apagar todo")) {
+                masterSwitch(0);
+                return;
+            }
+
+            // Mapeo de texto/números
+            const numberMap = {
+                "uno": 1, "1": 1,
+                "dos": 2, "2": 2,
+                "tres": 3, "3": 3,
+                "cuatro": 4, "4": 4,
+                "cinco": 5, "5": 5,
+                "seis": 6, "6": 6,
+                "siete": 7, "7": 7,
+                "ocho": 8, "8": 8
+            };
+
+            let targetRelay = null;
+            for (let key in numberMap) {
+                if (cmd.includes(key)) {
+                    targetRelay = numberMap[key];
+                    break;
+                }
+            }
+
+            if (targetRelay) {
+                if (cmd.includes("encender") || cmd.includes("prender") || cmd.includes("activa")) {
+                    setRelayStateByVoice(targetRelay, 1);
+                } else if (cmd.includes("apagar") || cmd.includes("desactiva")) {
+                    setRelayStateByVoice(targetRelay, 0);
+                }
+            }
+        }
+
+        function setRelayStateByVoice(num, state) {
+            const sw = document.getElementById(`sw-${num}`);
+            if (sw && sw.checked !== (state === 1)) {
+                sw.checked = (state === 1);
+                toggleRelay(num);
+            }
+        }
+    </script>
+</body>
+</html>
+)rawliteral";
     </script>
 </body>
 </html>
